@@ -1,0 +1,183 @@
+/*
+  Example sketch for the PS3 Bluetooth library - developed by Kristian Lauszus
+  For more information visit my blog: http://blog.tkjelectronics.dk/ or
+  send me an e-mail:  kristianl@tkjelectronics.com
+*/
+
+// project setting
+#define SUPPORT_PS4
+#define _DEBUG
+
+#ifdef SUPPORT_PS4
+#include <PS4BT.h>
+#endif
+#include <usbhub.h>
+
+// Satisfy the IDE, which needs to see the include statment in the ino too.
+#ifdef dobogusinclude
+# include <spi4teensy3.h>
+# include <SPI.h>
+#endif
+
+#include "TM1651.h"
+#define CLK 3//pins definitions for TM1651 and can be changed to other ports       
+#define DIO 2 
+#define COUNTTO 16 //digits from 0-f (use 10 to count from 0-9)
+TM1651 Display(CLK,DIO);
+
+//Connected to Device: 28:C1:3C:D1:6F:52
+
+#ifdef SUPPORT_PS4
+USB Usb;
+//USBHub Hub1(&Usb); // Some dongles have a hub inside
+BTD Btd(&Usb); // You have to create the Bluetooth Dongle instance like so
+
+/* You can create the instance of the PS4BT class in two ways */
+// This will start an inquiry and then pair with the PS4 controller - you only have to do this once
+// You will need to hold down the PS and Share button at the same time, the PS4 controller will then start to blink rapidly indicating that it is in pairing mode
+//PS4BT PS4(&Btd, PAIR);
+// After that you can simply create the instance like so and then press the PS button on the device
+PS4BT PS4(&Btd);
+#endif
+
+const int PIN_UP      = 8;    // MSX up
+const int PIN_DOWN    = 9;    // MSX down
+const int PIN_LEFT    = 4;    // MSX left
+const int PIN_RIGHT   = 5;    // MSX right
+const int PIN_T1      = 6;    // MSX TR1
+const int PIN_T2      = 7;    // MSX TR2
+
+volatile bool isUp, isDown, isLeft, isRight; 
+volatile bool isA, isB, isC, isD, isE, isF;
+volatile bool isStart, isSelect;
+
+volatile bool pushUp, pushDown, pushLeft, pushRight; 
+
+void setup()
+{
+  Serial.begin(115200);
+#if !defined(__MIPSEL__)
+  while (!Serial); // Wait for serial port to connect - used on Leonardo, Teensy and other boards with built-in USB CDC serial connection
+#endif
+
+  if (Usb.Init() == -1) {
+    Serial.print(F("\r\nOSC did not start"));
+    while (1); // Halt
+  }
+  // usage define
+  pinMode( PIN_UP,     INPUT);
+  pinMode( PIN_DOWN,   INPUT);
+  pinMode( PIN_LEFT,   INPUT);
+  pinMode( PIN_RIGHT,  INPUT);
+  pinMode( PIN_T1,     INPUT);
+  pinMode( PIN_T2,     INPUT);
+
+  // initialize
+  digitalWrite(PIN_UP,    LOW);
+  digitalWrite(PIN_DOWN,  LOW);
+  digitalWrite(PIN_LEFT,  LOW);
+  digitalWrite(PIN_RIGHT, LOW);
+  digitalWrite(PIN_T1,    LOW);
+  digitalWrite(PIN_T2,    LOW);
+
+  isUp = isDown = isLeft = isRight = isA = isB = isC = isD = isE = isF = false;
+
+  Serial.print(F("\r\nPS4 Bluetooth Library Started"));
+
+  Display.displayClear();
+  Display.displaySet(2);//BRIGHT_TYPICAL = 2,BRIGHT_DARKEST = 0,BRIGHTEST = 7;
+  Display.displayNum(0,0);
+}
+
+void loop()
+{
+  Usb.Task();
+
+#ifdef SUPPORT_PS4
+  if (PS4.connected())
+  {
+    isUp = ( PS4.getAnalogHat(LeftHatY) < 117 || PS4.getButtonPress(UP) );
+    isDown = ( PS4.getAnalogHat(LeftHatY) > 137 || PS4.getButtonPress(DOWN) );
+    isLeft = ( PS4.getAnalogHat(LeftHatX) < 117 || PS4.getButtonPress(LEFT) );
+    isRight = ( PS4.getAnalogHat(LeftHatX) > 137 || PS4.getButtonPress(RIGHT) );
+    isA = ( PS4.getButtonPress(CROSS) );
+    isB = ( PS4.getButtonPress(CIRCLE) );
+    isC = ( PS4.getButtonPress(SQUARE) );
+    isD = ( PS4.getButtonPress(TRIANGLE) );
+    isE = ( PS4.getButtonPress(L1) );
+    isF = ( PS4.getButtonPress(R1) );
+    isStart = ( PS4.getButtonClick(OPTIONS) );
+    isSelect = ( PS4.getButtonClick(SHARE) );
+    
+    if (PS4.getButtonClick(PS)) {
+      Serial.println(F("\r\nPS"));
+      Serial.print("Disconnect PS4 Pad!!  Battery Level : ");
+      Serial.println(PS4.getBatteryLevel());
+      Display.displayNum(2,PS4.getBatteryLevel()); 
+      PS4.disconnect();
+    }
+  }
+#endif
+
+  pinMode( PIN_UP, isUp ? OUTPUT : INPUT);
+  pinMode( PIN_DOWN, isDown ? OUTPUT : INPUT);
+  pinMode( PIN_LEFT, isLeft ? OUTPUT : INPUT);
+  pinMode( PIN_RIGHT, isRight ? OUTPUT : INPUT);
+  pinMode( PIN_T1, (isA || isC) ? OUTPUT : INPUT);
+  pinMode( PIN_T2, (isB || isD) ? OUTPUT : INPUT);
+
+#ifdef _DEBUG
+  if (isUp){
+    if(!pushUp){
+      Serial.print(F("\r\nUp"));
+      Display.displayNum(0,1); 
+      PS4.setLed(Red);
+      pushUp = true;
+    }
+  } else {
+    pushUp = false;
+  }
+
+  if (isDown){
+    if(!pushDown){
+      Serial.print(F("\r\nDown"));
+      Display.displayNum(0,2); 
+      PS4.setLed(Blue);
+      pushDown = true;
+    }
+  } else {
+    pushDown = false;
+  }
+
+  if(isLeft){
+    if(!pushLeft){
+      Serial.print(F("\r\nLeft"));
+      Display.displayNum(0,3); 
+      PS4.setLed(Yellow);
+      pushLeft =true;
+    }
+  } else {
+    pushLeft = false;
+  }
+
+  if (isRight){
+    if(!pushRight){
+      Serial.print(F("\r\nRight"));
+      Display.displayNum(0,4); 
+      PS4.setLed(Green);
+      pushRight = true;
+    }
+  } else {
+    pushRight = false;
+  }
+  
+  if (isA){
+    Serial.print(F("\r\nAkey"));
+    //PS4.setLedFlash(10, 10); // Set it to blink rapidly
+  }
+  if (isB){
+    Serial.print(F("\r\nBkey"));
+    //PS4.setLedFlash(0, 0); // Turn off blinking
+  }
+#endif
+}
