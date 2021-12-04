@@ -67,6 +67,8 @@ volatile bool isStart, isSelect;
 
 volatile bool pushUp, pushDown, pushLeft, pushRight; 
 
+int bat_level = 0;
+
 void setup()
 {
   Serial.begin(115200);
@@ -169,7 +171,7 @@ void loop()
     if(!pushUp){
       Serial.print(F("\r\nUp"));
       Display.displayNum(0,1); 
-      PS4.setLed(Red);
+      //PS4.setLed(Red);
       pushUp = true;
     }
   } else {
@@ -180,7 +182,7 @@ void loop()
     if(!pushDown){
       Serial.print(F("\r\nDown"));
       Display.displayNum(0,2); 
-      PS4.setLed(Blue);
+      //PS4.setLed(Blue);
       pushDown = true;
     }
   } else {
@@ -191,7 +193,7 @@ void loop()
     if(!pushLeft){
       Serial.print(F("\r\nLeft"));
       Display.displayNum(0,3); 
-      PS4.setLed(Yellow);
+      //PS4.setLed(Yellow);
       pushLeft =true;
     }
   } else {
@@ -202,7 +204,7 @@ void loop()
     if(!pushRight){
       Serial.print(F("\r\nRight"));
       Display.displayNum(0,4); 
-      PS4.setLed(Green);
+      //PS4.setLed(Green);
       pushRight = true;
     }
   } else {
