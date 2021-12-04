@@ -1,11 +1,6 @@
-/*
-  Example sketch for the PS3 Bluetooth library - developed by Kristian Lauszus
-  For more information visit my blog: http://blog.tkjelectronics.dk/ or
-  send me an e-mail:  kristianl@tkjelectronics.com
-*/
-
-// project setting
 #define SUPPORT_PS4
+#define SUPPORT_MVS
+//#define SUPPORT_MSX
 #define _DEBUG
 
 #ifdef SUPPORT_PS4
@@ -20,9 +15,8 @@
 #endif
 
 #include "TM1651.h"
-#define CLK 3//pins definitions for TM1651 and can be changed to other ports       
+#define CLK 3 //pins definitions for TM1651 and can be changed to other ports       
 #define DIO 2 
-#define COUNTTO 16 //digits from 0-f (use 10 to count from 0-9)
 TM1651 Display(CLK,DIO);
 
 //Connected to Device: 28:C1:3C:D1:6F:52
@@ -36,16 +30,36 @@ BTD Btd(&Usb); // You have to create the Bluetooth Dongle instance like so
 // This will start an inquiry and then pair with the PS4 controller - you only have to do this once
 // You will need to hold down the PS and Share button at the same time, the PS4 controller will then start to blink rapidly indicating that it is in pairing mode
 //PS4BT PS4(&Btd, PAIR);
+
 // After that you can simply create the instance like so and then press the PS button on the device
 PS4BT PS4(&Btd);
 #endif
+// Do not use pin 9, 10
 
+#ifdef SUPPORT_MSX
 const int PIN_UP      = 8;    // MSX up
-const int PIN_DOWN    = 9;    // MSX down
+const int PIN_DOWN    = 11;   // MSX down   //9-> 10
 const int PIN_LEFT    = 4;    // MSX left
 const int PIN_RIGHT   = 5;    // MSX right
 const int PIN_T1      = 6;    // MSX TR1
 const int PIN_T2      = 7;    // MSX TR2
+#endif
+
+#ifdef SUPPORT_MVS
+const int PIN_UP      = 30;
+const int PIN_DOWN    = 31;
+const int PIN_LEFT    = 32;
+const int PIN_RIGHT   = 33;
+const int PIN_T1      = 36;
+const int PIN_T2      = 37;
+const int PIN_T3      = 38;
+const int PIN_T4      = 39;
+const int PIN_T5      = 40;
+const int PIN_T6      = 41;
+
+const int PIN_START   = 26; 
+const int PIN_CREDIT  = 27;
+#endif
 
 volatile bool isUp, isDown, isLeft, isRight; 
 volatile bool isA, isB, isC, isD, isE, isF;
@@ -71,6 +85,14 @@ void setup()
   pinMode( PIN_RIGHT,  INPUT);
   pinMode( PIN_T1,     INPUT);
   pinMode( PIN_T2,     INPUT);
+#ifdef SUPPORT_MVS
+  pinMode( PIN_T3,     INPUT);
+  pinMode( PIN_T4,     INPUT);
+  pinMode( PIN_T5,     INPUT);
+  pinMode( PIN_T6,     INPUT);
+  pinMode( PIN_START,  INPUT);
+  pinMode( PIN_CREDIT, INPUT);
+#endif
 
   // initialize
   digitalWrite(PIN_UP,    LOW);
@@ -79,6 +101,14 @@ void setup()
   digitalWrite(PIN_RIGHT, LOW);
   digitalWrite(PIN_T1,    LOW);
   digitalWrite(PIN_T2,    LOW);
+#ifdef SUPPORT_MVS
+  digitalWrite(PIN_T3,    LOW);
+  digitalWrite(PIN_T4,    LOW);
+  digitalWrite(PIN_T5,    LOW);
+  digitalWrite(PIN_T6,    LOW);
+  digitalWrite(PIN_START, LOW);
+  digitalWrite(PIN_CREDIT,LOW);
+#endif
 
   isUp = isDown = isLeft = isRight = isA = isB = isC = isD = isE = isF = false;
 
@@ -93,29 +123,29 @@ void loop()
 {
   Usb.Task();
 
+  if(!PS4.connected()){
+    return;
+  }
 #ifdef SUPPORT_PS4
-  if (PS4.connected())
-  {
-    isUp = ( PS4.getAnalogHat(LeftHatY) < 117 || PS4.getButtonPress(UP) );
-    isDown = ( PS4.getAnalogHat(LeftHatY) > 137 || PS4.getButtonPress(DOWN) );
-    isLeft = ( PS4.getAnalogHat(LeftHatX) < 117 || PS4.getButtonPress(LEFT) );
-    isRight = ( PS4.getAnalogHat(LeftHatX) > 137 || PS4.getButtonPress(RIGHT) );
-    isA = ( PS4.getButtonPress(CROSS) );
-    isB = ( PS4.getButtonPress(CIRCLE) );
-    isC = ( PS4.getButtonPress(SQUARE) );
-    isD = ( PS4.getButtonPress(TRIANGLE) );
-    isE = ( PS4.getButtonPress(L1) );
-    isF = ( PS4.getButtonPress(R1) );
-    isStart = ( PS4.getButtonClick(OPTIONS) );
-    isSelect = ( PS4.getButtonClick(SHARE) );
-    
-    if (PS4.getButtonClick(PS)) {
-      Serial.println(F("\r\nPS"));
-      Serial.print("Disconnect PS4 Pad!!  Battery Level : ");
-      Serial.println(PS4.getBatteryLevel());
-      Display.displayNum(2,PS4.getBatteryLevel()); 
-      PS4.disconnect();
-    }
+  isUp = ( PS4.getAnalogHat(LeftHatY) < 117 || PS4.getButtonPress(UP) );
+  isDown = ( PS4.getAnalogHat(LeftHatY) > 137 || PS4.getButtonPress(DOWN) );
+  isLeft = ( PS4.getAnalogHat(LeftHatX) < 117 || PS4.getButtonPress(LEFT) );
+  isRight = ( PS4.getAnalogHat(LeftHatX) > 137 || PS4.getButtonPress(RIGHT) );
+  isA = ( PS4.getButtonPress(CROSS) );
+  isB = ( PS4.getButtonPress(CIRCLE) );
+  isC = ( PS4.getButtonPress(SQUARE) );
+  isD = ( PS4.getButtonPress(TRIANGLE) );
+  isE = ( PS4.getButtonPress(L1) );
+  isF = ( PS4.getButtonPress(R1) );
+  isStart = ( PS4.getButtonPress(OPTIONS) );
+  isSelect = ( PS4.getButtonPress(SHARE) );
+  
+  if (PS4.getButtonClick(PS)) {
+    Serial.println(F("\r\nPS"));
+    Serial.print("Disconnect PS4 Pad!!  Battery Level : ");
+    Serial.println(PS4.getBatteryLevel());
+    Display.displayNum(2,PS4.getBatteryLevel()); 
+    PS4.disconnect();
   }
 #endif
 
@@ -123,8 +153,16 @@ void loop()
   pinMode( PIN_DOWN, isDown ? OUTPUT : INPUT);
   pinMode( PIN_LEFT, isLeft ? OUTPUT : INPUT);
   pinMode( PIN_RIGHT, isRight ? OUTPUT : INPUT);
-  pinMode( PIN_T1, (isA || isC) ? OUTPUT : INPUT);
-  pinMode( PIN_T2, (isB || isD) ? OUTPUT : INPUT);
+  pinMode( PIN_T1, (isA) ? OUTPUT : INPUT);
+  pinMode( PIN_T2, (isB) ? OUTPUT : INPUT);
+#ifdef SUPPORT_MVS
+  pinMode( PIN_T3, (isC) ? OUTPUT : INPUT);
+  pinMode( PIN_T4, (isD) ? OUTPUT : INPUT);
+  pinMode( PIN_T5, (isE) ? OUTPUT : INPUT);
+  pinMode( PIN_T6, (isF) ? OUTPUT : INPUT);
+  pinMode( PIN_START, isStart ? OUTPUT : INPUT);
+  pinMode( PIN_CREDIT, isSelect ? OUTPUT : INPUT);
+#endif
 
 #ifdef _DEBUG
   if (isUp){
@@ -178,6 +216,15 @@ void loop()
   if (isB){
     Serial.print(F("\r\nBkey"));
     //PS4.setLedFlash(0, 0); // Turn off blinking
+  }
+  if (isStart){
+    Serial.print(F("\r\nSTART key"));
+    //PS4.setLedFlash(10, 10); // Set it to blink rapidly
+  }
+  if (isSelect){
+    Serial.print(F("\r\nSelect key"));
+    //PS4.setLedFlash(0, 0); // Turn off blinking
+    Serial.println(PS4.getBatteryLevel());
   }
 #endif
 }
