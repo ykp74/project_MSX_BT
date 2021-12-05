@@ -1,3 +1,5 @@
+#include <DueTimer.h>
+
 #define SUPPORT_PS4
 #define SUPPORT_MVS
 //#define SUPPORT_MSX
@@ -68,10 +70,32 @@ volatile bool isStart, isSelect;
 volatile bool pushUp, pushDown, pushLeft, pushRight; 
 
 int bat_level = 0;
+bool isConnect = false;
+
+void get_BatLevel_handler(){
+  int batLvl =  PS4.getBatteryLevel();
+
+  if( bat_level != batLvl){
+    bat_level = batLvl;
+    
+    if( bat_level > 8 ){
+      PS4.setLed(Blue);
+    } else if( bat_level > 6 ){
+      PS4.setLed(Green);
+    } else if( bat_level > 4 ){
+      PS4.setLed(Yellow);
+    } else {
+      PS4.setLed(Red);
+    } 
+  }
+  Serial.print("get_BatLevel_handler : ");
+  Serial.println(batLvl);
+}
 
 void setup()
 {
   Serial.begin(115200);
+
 #if !defined(__MIPSEL__)
   while (!Serial); // Wait for serial port to connect - used on Leonardo, Teensy and other boards with built-in USB CDC serial connection
 #endif
@@ -80,6 +104,7 @@ void setup()
     Serial.print(F("\r\nOSC did not start"));
     while (1); // Halt
   }
+
   // usage define
   pinMode( PIN_UP,     INPUT);
   pinMode( PIN_DOWN,   INPUT);
@@ -111,14 +136,15 @@ void setup()
   digitalWrite(PIN_START, LOW);
   digitalWrite(PIN_CREDIT,LOW);
 #endif
-
   isUp = isDown = isLeft = isRight = isA = isB = isC = isD = isE = isF = false;
 
-  Serial.print(F("\r\nPS4 Bluetooth Library Started"));
-
+  Timer3.attachInterrupt(get_BatLevel_handler).start(5000000);  // Calls every 5000ms
+  
   Display.displayClear();
   Display.displaySet(2);//BRIGHT_TYPICAL = 2,BRIGHT_DARKEST = 0,BRIGHTEST = 7;
   Display.displayNum(0,0);
+  
+  Serial.print(F("\r\nPS4 Bluetooth Library Started"));
 }
 
 void loop()
@@ -128,11 +154,12 @@ void loop()
   if(!PS4.connected()){
     return;
   }
+
 #ifdef SUPPORT_PS4
-  isUp = ( PS4.getAnalogHat(LeftHatY) < 117 || PS4.getButtonPress(UP) );
-  isDown = ( PS4.getAnalogHat(LeftHatY) > 137 || PS4.getButtonPress(DOWN) );
-  isLeft = ( PS4.getAnalogHat(LeftHatX) < 117 || PS4.getButtonPress(LEFT) );
-  isRight = ( PS4.getAnalogHat(LeftHatX) > 137 || PS4.getButtonPress(RIGHT) );
+  isUp = ( PS4.getAnalogHat(LeftHatY) < 50 || PS4.getButtonPress(UP) );
+  isDown = ( PS4.getAnalogHat(LeftHatY) > 200 || PS4.getButtonPress(DOWN) );
+  isLeft = ( PS4.getAnalogHat(LeftHatX) < 50 || PS4.getButtonPress(LEFT) );
+  isRight = ( PS4.getAnalogHat(LeftHatX) > 200 || PS4.getButtonPress(RIGHT) );
   isA = ( PS4.getButtonPress(CROSS) );
   isB = ( PS4.getButtonPress(CIRCLE) );
   isC = ( PS4.getButtonPress(SQUARE) );
@@ -144,9 +171,7 @@ void loop()
   
   if (PS4.getButtonClick(PS)) {
     Serial.println(F("\r\nPS"));
-    Serial.print("Disconnect PS4 Pad!!  Battery Level : ");
-    Serial.println(PS4.getBatteryLevel());
-    Display.displayNum(2,PS4.getBatteryLevel()); 
+    Serial.println("Disconnect PS4 Pad!!");
     PS4.disconnect();
   }
 #endif
@@ -170,7 +195,7 @@ void loop()
   if (isUp){
     if(!pushUp){
       Serial.print(F("\r\nUp"));
-      Display.displayNum(0,1); 
+      //Display.displayNum(0,1); 
       //PS4.setLed(Red);
       pushUp = true;
     }
@@ -181,7 +206,7 @@ void loop()
   if (isDown){
     if(!pushDown){
       Serial.print(F("\r\nDown"));
-      Display.displayNum(0,2); 
+      //Display.displayNum(0,2); 
       //PS4.setLed(Blue);
       pushDown = true;
     }
@@ -192,7 +217,7 @@ void loop()
   if(isLeft){
     if(!pushLeft){
       Serial.print(F("\r\nLeft"));
-      Display.displayNum(0,3); 
+      //Display.displayNum(0,3); 
       //PS4.setLed(Yellow);
       pushLeft =true;
     }
@@ -203,14 +228,15 @@ void loop()
   if (isRight){
     if(!pushRight){
       Serial.print(F("\r\nRight"));
-      Display.displayNum(0,4); 
+      //Display.displayNum(0,4); 
       //PS4.setLed(Green);
       pushRight = true;
     }
   } else {
     pushRight = false;
   }
-  
+ 
+ #if 0
   if (isA){
     Serial.print(F("\r\nAkey"));
     //PS4.setLedFlash(10, 10); // Set it to blink rapidly
@@ -226,7 +252,7 @@ void loop()
   if (isSelect){
     Serial.print(F("\r\nSelect key"));
     //PS4.setLedFlash(0, 0); // Turn off blinking
-    Serial.println(PS4.getBatteryLevel());
   }
+#endif
 #endif
 }
