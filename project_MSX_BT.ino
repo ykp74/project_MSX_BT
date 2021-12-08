@@ -38,6 +38,8 @@ PS4BT PS4(&Btd);
 #endif
 // Do not use pin 9, 10
 
+const int PIN_IND_LED  = 29;
+
 #ifdef SUPPORT_MSX
 const int PIN_UP      = 8;    // MSX up
 const int PIN_DOWN    = 11;   // MSX down   //9-> 10
@@ -92,6 +94,11 @@ void get_BatLevel_handler(){
   Serial.println(batLvl);
 }
 
+void ind_led_handler(void) {
+    // Toggle LED
+    digitalWrite( PIN_IND_LED, digitalRead( PIN_IND_LED ) ^ 1 );
+}
+
 void setup()
 {
   Serial.begin(115200);
@@ -104,7 +111,9 @@ void setup()
     Serial.print(F("\r\nOSC did not start"));
     while (1); // Halt
   }
-
+  isConnect = false;
+  pinMode( PIN_IND_LED, OUTPUT);
+  
   // usage define
   pinMode( PIN_UP,     INPUT);
   pinMode( PIN_DOWN,   INPUT);
@@ -120,7 +129,8 @@ void setup()
   pinMode( PIN_START,  INPUT);
   pinMode( PIN_CREDIT, INPUT);
 #endif
-
+  digitalWrite( PIN_IND_LED, HIGH);
+  
   // initialize
   digitalWrite(PIN_UP,    LOW);
   digitalWrite(PIN_DOWN,  LOW);
@@ -139,7 +149,7 @@ void setup()
   isUp = isDown = isLeft = isRight = isA = isB = isC = isD = isE = isF = false;
 
   Timer3.attachInterrupt(get_BatLevel_handler).start(5000000);  // Calls every 5000ms
-  
+  Timer5.attachInterrupt(ind_led_handler).start(500000);  // Calls every 1s
   Display.displayClear();
   Display.displaySet(2);//BRIGHT_TYPICAL = 2,BRIGHT_DARKEST = 0,BRIGHTEST = 7;
   Display.displayNum(0,0);
@@ -152,13 +162,16 @@ void loop()
   Usb.Task();
 
   if(!PS4.connected()){
+    isConnect = false;
     return;
+  } else {
+    isConnect = true;
   }
 
 #ifdef SUPPORT_PS4
-  isUp = ( PS4.getAnalogHat(LeftHatY) < 50 || PS4.getButtonPress(UP) );
-  isDown = ( PS4.getAnalogHat(LeftHatY) > 200 || PS4.getButtonPress(DOWN) );
-  isLeft = ( PS4.getAnalogHat(LeftHatX) < 50 || PS4.getButtonPress(LEFT) );
+  isUp    = ( PS4.getAnalogHat(LeftHatY) < 50 || PS4.getButtonPress(UP) );
+  isDown  = ( PS4.getAnalogHat(LeftHatY) > 200 || PS4.getButtonPress(DOWN) );
+  isLeft  = ( PS4.getAnalogHat(LeftHatX) < 50 || PS4.getButtonPress(LEFT) );
   isRight = ( PS4.getAnalogHat(LeftHatX) > 200 || PS4.getButtonPress(RIGHT) );
   isA = ( PS4.getButtonPress(CROSS) );
   isB = ( PS4.getButtonPress(CIRCLE) );
@@ -166,11 +179,11 @@ void loop()
   isD = ( PS4.getButtonPress(TRIANGLE) );
   isE = ( PS4.getButtonPress(L1) );
   isF = ( PS4.getButtonPress(R1) );
-  isStart = ( PS4.getButtonPress(OPTIONS) );
+  isStart  = ( PS4.getButtonPress(OPTIONS) );
   isSelect = ( PS4.getButtonPress(SHARE) );
   
   if (PS4.getButtonClick(PS)) {
-    Serial.println(F("\r\nPS"));
+    //Serial.println(F("\r\nPS"));
     Serial.println("Disconnect PS4 Pad!!");
     PS4.disconnect();
   }
@@ -196,7 +209,6 @@ void loop()
     if(!pushUp){
       Serial.print(F("\r\nUp"));
       //Display.displayNum(0,1); 
-      //PS4.setLed(Red);
       pushUp = true;
     }
   } else {
@@ -207,7 +219,6 @@ void loop()
     if(!pushDown){
       Serial.print(F("\r\nDown"));
       //Display.displayNum(0,2); 
-      //PS4.setLed(Blue);
       pushDown = true;
     }
   } else {
@@ -218,8 +229,7 @@ void loop()
     if(!pushLeft){
       Serial.print(F("\r\nLeft"));
       //Display.displayNum(0,3); 
-      //PS4.setLed(Yellow);
-      pushLeft =true;
+       pushLeft =true;
     }
   } else {
     pushLeft = false;
@@ -229,7 +239,6 @@ void loop()
     if(!pushRight){
       Serial.print(F("\r\nRight"));
       //Display.displayNum(0,4); 
-      //PS4.setLed(Green);
       pushRight = true;
     }
   } else {
