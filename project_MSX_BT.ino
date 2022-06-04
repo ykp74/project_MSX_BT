@@ -22,21 +22,20 @@
 TM1651 Display(CLK,DIO);
 
 //Connected to Device: 28:C1:3C:D1:6F:52
+// Do not use pin 9, 10
 
-#ifdef SUPPORT_PS4
 USB Usb;
 //USBHub Hub1(&Usb); // Some dongles have a hub inside
 BTD Btd(&Usb); // You have to create the Bluetooth Dongle instance like so
 
+#ifdef SUPPORT_PS4
 /* You can create the instance of the PS4BT class in two ways */
 // This will start an inquiry and then pair with the PS4 controller - you only have to do this once
 // You will need to hold down the PS and Share button at the same time, the PS4 controller will then start to blink rapidly indicating that it is in pairing mode
-//PS4BT PS4(&Btd, PAIR);
-
+PS4BT PS4(&Btd, PAIR);
 // After that you can simply create the instance like so and then press the PS button on the device
-PS4BT PS4(&Btd);
+//PS4BT PS4(&Btd);
 #endif
-// Do not use pin 9, 10
 
 const int PIN_IND_LED  = 29;
 
@@ -45,6 +44,7 @@ const int PIN_UP      = 8;    // MSX up
 const int PIN_DOWN    = 11;   // MSX down   //9-> 10
 const int PIN_LEFT    = 4;    // MSX left
 const int PIN_RIGHT   = 5;    // MSX right
+
 const int PIN_T1      = 6;    // MSX TR1
 const int PIN_T2      = 7;    // MSX TR2
 #endif
@@ -54,6 +54,7 @@ const int PIN_UP      = 30;
 const int PIN_DOWN    = 31;
 const int PIN_LEFT    = 32;
 const int PIN_RIGHT   = 33;
+
 const int PIN_T1      = 36;
 const int PIN_T2      = 37;
 const int PIN_T3      = 38;
@@ -74,7 +75,7 @@ volatile bool pushUp, pushDown, pushLeft, pushRight;
 int bat_level = 0;
 bool isConnect = false;
 
-void get_BatLevel_handler(){
+void get_BatLevel_handler(void){
   int batLvl =  PS4.getBatteryLevel();
 
   if( bat_level != batLvl){
@@ -94,9 +95,12 @@ void get_BatLevel_handler(){
   Serial.println(batLvl);
 }
 
-void ind_led_handler(void) {
+void ind_led_handler(void){
     // Toggle LED
     digitalWrite( PIN_IND_LED, digitalRead( PIN_IND_LED ) ^ 1 );
+}
+void ind_led_eable(bool enable){
+    digitalWrite( PIN_IND_LED, enable );
 }
 
 void setup()
@@ -129,8 +133,8 @@ void setup()
   pinMode( PIN_START,  INPUT);
   pinMode( PIN_CREDIT, INPUT);
 #endif
-  digitalWrite( PIN_IND_LED, HIGH);
-  
+  digitalWrite( PIN_IND_LED, LOW);
+
   // initialize
   digitalWrite(PIN_UP,    LOW);
   digitalWrite(PIN_DOWN,  LOW);
@@ -146,14 +150,15 @@ void setup()
   digitalWrite(PIN_START, LOW);
   digitalWrite(PIN_CREDIT,LOW);
 #endif
-  isUp = isDown = isLeft = isRight = isA = isB = isC = isD = isE = isF = false;
+
+  isUp = isDown = isLeft = isRight = false;
+  isA = isB = isC = isD = isE = isF = false;
 
   Timer3.attachInterrupt(get_BatLevel_handler).start(5000000);  // Calls every 5000ms
-  Timer5.attachInterrupt(ind_led_handler).start(500000);  // Calls every 1s
+  //Timer5.attachInterrupt(ind_led_handler).start(500000);  // Calls every 1s
   Display.displayClear();
   Display.displaySet(2);//BRIGHT_TYPICAL = 2,BRIGHT_DARKEST = 0,BRIGHTEST = 7;
   Display.displayNum(0,0);
-  
   Serial.print(F("\r\nPS4 Bluetooth Library Started"));
 }
 
@@ -161,11 +166,16 @@ void loop()
 {
   Usb.Task();
 
-  if(!PS4.connected()){
+#ifdef SUPPORT_PS4
+  if(!PS4.connected())
+#endif
+  {
     isConnect = false;
+    ind_led_eable(false);
     return;
   } else {
     isConnect = true;
+    ind_led_eable(true);
   }
 
 #ifdef SUPPORT_PS4
@@ -182,14 +192,14 @@ void loop()
   isStart  = ( PS4.getButtonPress(OPTIONS) );
   isSelect = ( PS4.getButtonPress(SHARE) );
   
-  if (PS4.getButtonClick(PS)) {
+  if(PS4.getButtonClick(PS)){
     //Serial.println(F("\r\nPS"));
     Serial.println("Disconnect PS4 Pad!!");
     PS4.disconnect();
   }
 #endif
 
-  pinMode( PIN_UP, isUp ? OUTPUT : INPUT);
+  pinMode( PIN_UP, isUp ? OUTPUT : INPUT);  //INPUT : floating
   pinMode( PIN_DOWN, isDown ? OUTPUT : INPUT);
   pinMode( PIN_LEFT, isLeft ? OUTPUT : INPUT);
   pinMode( PIN_RIGHT, isRight ? OUTPUT : INPUT);
@@ -244,24 +254,22 @@ void loop()
   } else {
     pushRight = false;
   }
- 
- #if 0
-  if (isA){
-    Serial.print(F("\r\nAkey"));
-    //PS4.setLedFlash(10, 10); // Set it to blink rapidly
-  }
-  if (isB){
-    Serial.print(F("\r\nBkey"));
-    //PS4.setLedFlash(0, 0); // Turn off blinking
-  }
-  if (isStart){
-    Serial.print(F("\r\nSTART key"));
-    //PS4.setLedFlash(10, 10); // Set it to blink rapidly
-  }
-  if (isSelect){
-    Serial.print(F("\r\nSelect key"));
-    //PS4.setLedFlash(0, 0); // Turn off blinking
-  }
-#endif
+
+//  if (isA){
+//    Serial.print(F("\r\nAkey"));
+//    //PS4.setLedFlash(10, 10); // Set it to blink rapidly
+//  }
+//  if (isB){
+//    Serial.print(F("\r\nBkey"));
+//    //PS4.setLedFlash(0, 0); // Turn off blinking
+//  }
+//  if (isStart){
+//    Serial.print(F("\r\nSTART key"));
+//    //PS4.setLedFlash(10, 10); // Set it to blink rapidly
+//  }
+//  if (isSelect){
+//    Serial.print(F("\r\nSelect key"));
+//    //PS4.setLedFlash(0, 0); // Turn off blinking
+//  }
 #endif
 }
